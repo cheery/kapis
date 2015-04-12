@@ -1,29 +1,3 @@
-parse = (source) ->
-    tokens = kapis.tokenize source, {"(": 'lp', ")": 'rp'}
-    index = 0
-    filled = () -> index < tokens.length
-    get = (k=0) -> tokens[index+k]
-    advance = () -> tokens[index++]
-    expect = (token, name) ->
-        throw "syn error" if token.name != name
-    expression = () ->
-        unless filled()
-            throw "syn error"
-        if get().name == 'lp'
-            lst = []
-            lp = advance()
-            while get().name != 'rp'
-                lst.push expression()
-            rp = expect(advance(), 'rp')
-            return {start:lp.start, stop:lp.stop, name:'form', seq:lst}
-        if get().name == 'rp'
-            throw "syn error"
-        return advance()
-    lst = []
-    while filled()
-        lst.push expression()
-    return lst
-
 class Object
     call: (argv) ->
         return {name:'exception', reason:"cannot call #{@repr()}"}
@@ -33,8 +7,8 @@ class Interface extends Object
         @methods = {}
     repr: () -> "#{@name}"
 
-none = new Interface("null")
-none.parent = none
+kapis.none = none = new Interface("null")
+kapis.none.parent = kapis.none
 
 class Integer extends Object
     constructor: (@integer) ->
@@ -76,29 +50,8 @@ class Env
         @block.push {name:'return_none'}
         return new Code(@block)
 
-compile = (exps) ->
-    env = new Env()
-    for exp in exps
-        translate(env, exp)
-    code = env.close()
-    return code
-
-translate = (env, exp) ->
-    write = env.builder(exp)
-    if exp.name == 'symbol'
-        return write name:'variable', value:exp.string
-    if exp.name == 'string'
-        return write name:'constant', value:new String(exp.string)
-    if exp.name == 'int'
-        return write name:'constant', value:new Integer(parseInt(exp.string))
-    if exp.name == 'hex'
-        return write name:'constant', value:new Integer(parseInt(exp.string, 16))
-    if exp.name == 'form'
-        callee = translate(env, exp.seq[0])
-        args = []
-        args.push translate(env, arg) for arg in exp.seq[1...]
-        return write {name:'call', callee, args}
-    throw "compile error: #{exp.name}"
+    new_string: (string) -> new String(string)
+    new_int: (num) -> new Integer(num)
 
 init_state = (code) ->
     block = code.block
@@ -145,7 +98,8 @@ interpret = (code) ->
     throw "malformed code block"
 
 try_eval = (string) ->
-    code = compile(parse(string))
+    env = new Env()
+    code = kapis.compile(env, kapis.parse(string))
     interpret(code)
 
 window.onload = () ->
