@@ -1,5 +1,5 @@
 parse = (source) ->
-    tokens = tokenize source, {"(": 'lp', ")": 'rp'}
+    tokens = kapis.tokenize source, {"(": 'lp', ")": 'rp'}
     index = 0
     filled = () -> index < tokens.length
     get = (k=0) -> tokens[index+k]
@@ -106,7 +106,7 @@ init_state = (code) ->
     mem = (none for k in [0...block.top])
     loc = {
         "print": new Native (argv) ->
-            output.innerText += (arg.repr() for arg in argv).join(' ') + '\n'
+            console.log (arg.repr() for arg in argv).join(' ')
             return {name:'return', value:none}
     }
     return {block, pc, mem, loc}
@@ -146,17 +146,16 @@ interpret = (code) ->
 
 try_eval = (string) ->
     code = compile(parse(string))
-    try
-        result = interpret(code)
-        output.innerText += "Output: #{result.repr()}\n"
-    catch error
-        output.innerText += "Error: #{error}\n"
-    
+    interpret(code)
 
 window.onload = () ->
-    pbox = document.getElementById('parserbox')
-    window.output = document.getElementById('output')
-
-    try_eval(pbox.value)
-    pbox.onchange = () ->
-        try_eval(pbox.value)
+    scripts = document.querySelectorAll('script[type="text/kapis"]')
+    for script in scripts
+        if script.src
+            xhr = new XMLHttpRequest()
+            xhr.onload = () ->
+                try_eval(xhr.response)
+            xhr.open("get", script.src, true)
+            xhr.send()
+        else
+            try_eval(script.text)

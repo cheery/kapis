@@ -75,7 +75,7 @@ next_token = (stream, table) ->
         return {start, stop:stream.pos(), name, string}
     throw "bad character #{stream.current}"
 
-window.tokenize = (source, table) ->
+kapis.tokenize = (source, table) ->
     stream = new CStream(source)
     tokens = []
     while stream.filled()
